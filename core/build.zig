@@ -287,6 +287,16 @@ fn addTarget(
     const opus_c = linkOpus(b, module);
 
     if (options.sysroot) |sysroot| {
+        // Le niveau d'API Android, pour les en-têtes du NDK. Le NDK 30 refuse
+        // de compiler sans lui (« Unversioned target triples are not
+        // supported ») ; le 28 se rabattait en silence sur « toutes les API ».
+        // Il passe en macro et pas dans la cible : une cible versionnée fait
+        // demander à Zig sa propre libc Android, qu'il ne fournit pas.
+        if (options.triple != null) {
+            const api = b.fmt("{d}", .{android_api});
+            module.addCMacro("__ANDROID_API__", api);
+            opus_c.defineCMacro("__ANDROID_API__", api);
+        }
         // La traduction de opus.h lit <stdint.h> : les mêmes en-têtes que le module.
         opus_c.addSystemIncludePath(.{ .cwd_relative = b.fmt("{s}/usr/include", .{sysroot}) });
         if (options.triple) |triple| {
@@ -316,6 +326,7 @@ fn addTarget(
                     .optimize = .ReleaseSmall,
                     .link_libc = false,
                 });
+                jni_c.defineCMacro("__ANDROID_API__", b.fmt("{d}", .{android_api}));
                 jni_c.addSystemIncludePath(.{ .cwd_relative = b.fmt("{s}/usr/include", .{sysroot}) });
                 jni_c.addSystemIncludePath(.{
                     .cwd_relative = b.fmt("{s}/usr/include/{s}", .{ sysroot, triple }),
