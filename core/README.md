@@ -1,109 +1,114 @@
 # goul-audio
 
-Le cœur audio de Goul : format de trame, codec Opus et tampon de lecture,
-écrits une fois et compilés pour le téléphone **et** le navigateur.
+Goul's audio core: the wire framing, the Opus codec and the jitter buffer,
+written once and compiled for the phone **and** the browser.
 
-C'est la raison d'être du paquet. La console de dispatch et l'app du livreur
-ne peuvent pas diverger sur la façon de décoder un flux si elles exécutent le
-même code.
+That is the whole point of this package. The dispatch console and the
+courier's app cannot disagree on how a stream decodes if they run the same
+code.
 
-## Commandes
+## Commands
 
-    zig build test              # 22 tests du cœur — sur ta machine, sans appareil
-    zig build wasm              # console web -> zig-out/wasm/goul-audio.wasm
-    node --test js/wasm.test.mjs   # 6 tests du module tel qu'il sera chargé
+    make test                   # everything below, on your machine
+    zig build test              # 48 core tests — no device, no network
+    zig build wasm              # web console -> zig-out/wasm/goul-audio.wasm
+    node --test js/             # 10 tests of the module as the browser loads it
 
-    # Android : une bibliothèque partagée, pont JNI compris
+    # Android: a shared library, JNI bridge included (NDK 28.2 — 30 is not supported)
     zig build android -Dandroid-sysroot=$NDK/toolchains/llvm/prebuilt/darwin-x86_64/sysroot
 
-    # iOS : appareil + simulateur réunis dans un XCFramework
+    # iOS: device + simulator in one XCFramework
     ./tools/make-xcframework.sh
 
-`zig build test` ne demande ni téléphone, ni émulateur, ni réseau : une
-coupure, une rafale, un livreur coupé en plein mot sont tous reproductibles
-en quelques millisecondes.
+`zig build test` needs no phone, no emulator and no network: a dropout, a
+burst, a courier cut off mid-word are all reproducible in a few milliseconds.
 
-`js/compat.test.mjs` compare le module construit ici au binaire en service
-avant ce dépôt (`testdata/goul-audio-0.1.0.wasm`) : mêmes trames, même son, au
-bit près, et chacun décode ce que l'autre émet.
+`js/compat.test.mjs` compares the module built here with the binary that was
+in service before this repository (`testdata/goul-audio-0.1.0.wasm`): same
+frames, same sound, bit for bit, and each one decodes what the other emits.
 
-Zig 0.17.1 exactement (`build.zig.zon`) : `tools/require-zig.sh` le vérifie.
+Exactly Zig 0.17.1 (`build.zig.zon`): `tools/require-zig.sh` checks it.
 
-## Ce que Zig fait, et ce qu'il ne fait pas
+## What Zig does, and what it doesn't
 
-Il compile libopus pour les trois cibles depuis une seule commande — pas de
-CMake, pas de plomberie NDK dans Gradle, pas de projet Xcode.
+It compiles libopus for all three targets from a single command — no CMake,
+no NDK plumbing in Gradle, no Xcode project.
 
-Il ne remplace pas les SDK. Les en-têtes libc de WebAssembly sont livrés avec
-Zig ; ceux de Bionic et d'Apple ne sont pas redistribuables, donc Android et
-iOS pointent vers un sysroot déjà présent sur la machine. Les SDK Apple sont
-trouvés tout seuls via `xcrun`.
+It does not replace the SDKs. The WebAssembly libc headers ship with Zig;
+Bionic's and Apple's are not redistributable, so Android and iOS point to a
+sysroot already on the machine. Apple SDKs are found automatically through
+`xcrun`.
 
-Sur Apple Silicon, l'appareil et le simulateur ont la **même architecture mais
-des plateformes différentes** : `lipo` ne peut pas les fusionner, seul un
-XCFramework les contient tous les deux. C'est ce que fait
-`tools/make-xcframework.sh`.
+On Apple Silicon, device and simulator share **the same architecture but
+different platforms**: `lipo` cannot merge them, only an XCFramework can hold
+both. That is what `tools/make-xcframework.sh` builds.
 
-Ce script réempaquette aussi les archives avec le `libtool` de Xcode, parce que
-l'archiveur de Zig ne cale pas les membres sur 8 octets et que le linker
-d'Apple refuse une archive Mach-O qui ne l'est pas :
+The script also repacks the archives with Xcode's `libtool`, because Zig's
+archiver does not align members to 8 bytes and Apple's linker rejects a
+Mach-O archive that is not aligned:
 
     ld: 64-bit mach-o member 'libgoul-audio_zcu.o' not 8-byte aligned
 
-## La règle qui tient tout
+On Android, the API level (24) is passed to the NDK headers as
+`__ANDROID_API__` rather than in the target triple: a versioned triple makes
+Zig try to provide its own Android libc, which it cannot. NDK 30 rejects
+unversioned triples outright, so the NDK is pinned to 28.2.
 
-> Quand on est en retard, on **jette**. On ne joue jamais plus vite.
+## The rule everything rests on
 
-Rejouer un retard en accéléré donne cette voix de dessin animé, et ça ne
-rattrape jamais rien : les mots prennent le même temps à être dits. Jeter perd
-une fraction de seconde et reste en direct. Sur une radio, être à l'heure vaut
-mieux qu'être complet.
+> When we are late, we **drop**. We never play faster.
 
-## L'ABI
+Replaying a delay at higher speed gives that cartoon voice, and it never
+catches up anyway: words take the same time to be said. Dropping loses a
+fraction of a second and stays live. On a radio, being on time beats being
+complete.
 
-Onze fonctions, ni structs ni callbacks — ce que tous les FFI savent faire.
+## The ABI
 
-L'asymétrie entre les deux sens est voulue : **encoder est synchrone** (le
-micro sait quand il a 20 ms), **décoder est push/pull** (le réseau livre quand
-il veut, la lecture réclame toutes les 20 ms). C'est le tampon qui décide
-quand le son sort.
+Eleven functions, no structs, no callbacks — what every FFI can handle.
 
-## Fichiers
+The asymmetry between the two directions is deliberate: **encoding is
+synchronous** (the microphone knows when it has 20 ms), **decoding is
+push/pull** (the network delivers when it wants, playback asks every 20 ms).
+The jitter buffer decides when sound comes out.
+
+## Files
 
 | | |
 |---|---|
-| `src/frame.zig` | le format sur le fil — 4 octets de flux, 2 de séquence, puis Opus |
-| `src/jitter.zig` | le tampon de lecture, et la règle ci-dessus |
-| `src/codec.zig` | Opus, enveloppé mince |
-| `src/abi.zig` | l'ABI C |
-| `src/android.zig` | le pont JNI — pas de CMake, pas de plugin NDK |
-| `js/index.ts` | la liaison JavaScript typée |
-| `opus_sources.zig` | généré par `tools/regen-opus-sources.sh` |
+| `src/frame.zig` | the wire format — 4 bytes of stream id, 2 of sequence, then Opus |
+| `src/jitter.zig` | the jitter buffer, and the rule above |
+| `src/codec.zig` | Opus, thinly wrapped |
+| `src/abi.zig` | the C ABI |
+| `src/android.zig` | the JNI bridge — no CMake, no NDK plugin |
+| `src/opus_c.h`, `src/jni_c.h` | the C headers the build translates to Zig (Zig 0.17 has no `@cImport`) |
+| `opus_sources.zig` | generated by `tools/regen-opus-sources.sh` |
 
-## Débit mesuré
+The typed JavaScript binding lives in `../packages/audio-web`.
 
-À 24 kbit/s demandés, moyenne d'octets par trame de 20 ms sur 40 trames :
+## Measured bitrate
 
-| | parole | silence |
+At a requested 24 kbit/s, average bytes per 20 ms frame over 40 frames:
+
+| | speech | silence |
 |---|---|---|
 | CBR | 60 (24 kbit/s) | 18 |
-| VBR contraint | 57 (22 kbit/s) | 9 |
-| VBR libre | 57 (22 kbit/s) | 9 |
+| Constrained VBR | 57 (22 kbit/s) | 9 |
+| Unconstrained VBR | 57 (22 kbit/s) | 9 |
 
-Le gain du VBR n'est **pas** sur la parole — 60 contre 57, c'est du bruit. Il
-est sur le silence, qui est divisé par deux, et sur un canal de push-to-talk
-le silence est l'essentiel du temps d'antenne : les pauses dans une phrase,
-l'instant avant de relâcher le bouton. Avec le DTX par-dessus, un silence qui
-dure tombe à un octet.
+The VBR gain is **not** on speech — 60 versus 57 is noise. It is on silence,
+which is halved, and on a push-to-talk channel silence is most of the airtime:
+the pauses within a sentence, the instant before releasing the button. With
+DTX on top, a lasting silence drops to a single byte.
 
-La contrainte ne coûte rien de mesurable, donc elle reste : elle borne les
-pics, ce qui est une assurance gratuite sur un lien déjà en difficulté.
+The constraint costs nothing measurable, so it stays: it bounds the peaks,
+which is free insurance on a link that is already struggling.
 
-## Le module WebAssembly
+## The WebAssembly module
 
-216 Ko, **zéro import**. Pas de shim WASI, pas de système de fichiers, pas
-d'horloge — le navigateur lui donne de la mémoire et appelle des fonctions.
+About 215 KB, **zero imports**. No WASI shim, no filesystem, no clock — the
+browser hands it memory and calls functions.
 
-Les exports sont énumérés dans `build.zig` plutôt que laissés à `rdynamic`,
-qui publierait les 75 points d'entrée de libopus qu'on n'appelle jamais. Un
-test vérifie qu'il n'y a rien de plus que l'ABI.
+The exports are listed in `build.zig` rather than left to `rdynamic`, which
+would publish the 75 libopus entry points we never call. A test checks there
+is nothing beyond the ABI.
