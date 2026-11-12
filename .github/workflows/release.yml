@@ -106,6 +106,6 @@ jobs:
         with:
           merge-multiple: true
       - run: sha256sum goul-audio-*.zip > SHA256SUMS
-      - run: gh release create "$GITHUB_REF_NAME" goul-audio-*.zip SHA256SUMS --title "$GITHUB_REF_NAME" --notes-file CHANGELOG.md
+      - run: gh release create "$GITHUB_REF_NAME" goul-audio-*.zip SHA256SUMS --title "$GITHUB_REF_NAME" --notes-file .github/RELEASE_NOTES.md
         env:
           GH_TOKEN: ${{ github.token }}

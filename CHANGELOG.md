@@ -1,5 +1,10 @@
 # Journal des changements
 
+## 1.0.1
+
+Documentation publique en anglais (page npm, README du dépôt, notes de
+version), comme konet. Aucun changement de code.
+
 ## 1.0.0
 
 Première version publiée depuis ce dépôt. Le cœur est celui que Goul, Livro et

@@ -1,7 +1,7 @@
 {
   "name": "@raucheacho/goul-audio-web",
-  "version": "1.0.0",
-  "description": "Le cœur audio de Goul dans le navigateur : Opus, trame et tampon de lecture en WebAssembly, et les AudioWorklets qui le font tourner.",
+  "version": "1.0.1",
+  "description": "Goul's audio core for the browser: Opus, framing and jitter buffer in WebAssembly, plus the AudioWorklets that run it.",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.cjs",
@@ -27,5 +27,20 @@
   "devDependencies": {
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raucheacho/goul.git",
+    "directory": "packages/audio-web"
+  },
+  "homepage": "https://github.com/raucheacho/goul/tree/main/packages/audio-web#readme",
+  "keywords": [
+    "opus",
+    "webassembly",
+    "audio",
+    "push-to-talk",
+    "jitter-buffer",
+    "audioworklet",
+    "voice"
+  ]
 }

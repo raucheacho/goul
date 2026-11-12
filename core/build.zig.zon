@@ -1,6 +1,6 @@
 .{
     .name = .goul_audio,
-    .version = "1.0.0",
+    .version = "1.0.1",
     .fingerprint = 0xd84afbc56d9f4951,
     .minimum_zig_version = "0.17.1",
     .dependencies = .{
