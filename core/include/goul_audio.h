@@ -1,7 +1,7 @@
 /*
  * L'ABI C du cœur audio de Goul.
  *
- * The implementation is Zig, in packages/goul-audio, and the same source runs
+ * The implementation is Zig, in github.com/raucheacho/goul (core/), and the same source runs
  * as WebAssembly in the dispatch console. This header exists so Swift and any
  * other C caller can reach it.
  *
