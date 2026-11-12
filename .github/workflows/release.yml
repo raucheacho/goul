@@ -1,0 +1,105 @@
+name: Release
+
+# Une étiquette vX.Y.Z publie la version : le paquet web sur npm, et les
+# binaires mobiles attachés à la version GitHub, avec leurs empreintes.
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  ZIG_VERSION: 0.17.1
+
+jobs:
+  test:
+    name: Tests du cœur
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: zig build test --summary all
+      - run: zig build wasm
+      - run: node --test js/
+
+  publish-web:
+    name: Paquet web sur npm
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+      - run: make -C core wasm
+      - working-directory: packages/audio-web
+        run: |
+          npm ci
+          npm version ${GITHUB_REF_NAME#v} --no-git-tag-version
+          npm run build
+          npm test
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  android:
+    name: Binaire Android
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - run: ANDROID_NDK="$ANDROID_NDK_LATEST_HOME" make -C core android
+      - run: cd dist/android && zip -r ../../goul-audio-android-${GITHUB_REF_NAME}.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: goul-audio-android-*.zip
+
+  ios:
+    name: Binaire iOS
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - run: make -C core ios
+      - run: cd dist/ios && zip -r ../../goul-audio-ios-${GITHUB_REF_NAME}.zip GoulAudioCore.xcframework
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: goul-audio-ios-*.zip
+
+  github-release:
+    name: Version GitHub
+    needs: [android, ios, publish-web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - run: sha256sum goul-audio-*.zip > SHA256SUMS
+      - run: gh release create "$GITHUB_REF_NAME" goul-audio-*.zip SHA256SUMS --title "$GITHUB_REF_NAME" --notes-file CHANGELOG.md
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,6 @@
+// Lets Swift `import GoulAudioCore` instead of needing a bridging header,
+// which an Expo module pod does not have.
+module GoulAudioCore {
+  header "goul_audio.h"
+  export *
+}

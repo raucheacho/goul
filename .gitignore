@@ -1,0 +1,4 @@
+dist/
+packages/audio-web/assets/goul-audio.wasm
+node_modules/
+.DS_Store

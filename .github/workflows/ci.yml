@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Doit valoir minimum_zig_version dans core/build.zig.zon.
+env:
+  ZIG_VERSION: 0.17.1
+
+jobs:
+  core:
+    name: Cœur audio (tests, wasm, compatibilité)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Les 48 tests du cœur, sans appareil ni réseau.
+      - run: zig build test --summary all
+      # Le module tel que le navigateur le charge, et face au binaire en service.
+      - run: zig build wasm
+      - run: node --test js/
+
+  web:
+    name: Paquet web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: make -C core wasm
+      - working-directory: packages/audio-web
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+          npm test
+
+  android:
+    name: Binaire Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      # Le NDK est préinstallé sur les machines GitHub.
+      - run: ANDROID_NDK="$ANDROID_NDK_LATEST_HOME" make -C core android
+      - run: test -s dist/android/arm64-v8a/libgoul-audio.so
+
+  ios:
+    name: Binaire iOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - run: make -C core ios
+      - run: test -d dist/ios/GoulAudioCore.xcframework

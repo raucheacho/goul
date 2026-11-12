@@ -1,0 +1,31 @@
+{
+  "name": "@raucheacho/goul-audio-web",
+  "version": "1.0.0",
+  "description": "Le cœur audio de Goul dans le navigateur : Opus, trame et tampon de lecture en WebAssembly, et les AudioWorklets qui le font tourner.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./assets/*": "./assets/*"
+  },
+  "files": [
+    "dist",
+    "assets"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}

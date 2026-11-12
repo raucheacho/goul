@@ -1,0 +1,13 @@
+.{
+    .name = .goul_audio,
+    .version = "1.0.0",
+    .fingerprint = 0xd84afbc56d9f4951,
+    .minimum_zig_version = "0.17.1",
+    .dependencies = .{
+        .opus = .{
+            .url = "https://github.com/xiph/opus/archive/refs/tags/v1.5.2.tar.gz",
+            .hash = "N-V-__8AAMEO5AA16T-SYUVA1ipB1ctBxSMowU_ZD3tzi54M",
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src" },
+}
