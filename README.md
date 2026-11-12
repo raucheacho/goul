@@ -25,7 +25,7 @@ binaire embarqué par les trois apps avant ce dépôt.
 ## Construire
 
     make -C core wasm      # -> packages/audio-web/assets/goul-audio.wasm
-    make -C core android   # -> dist/android/arm64-v8a/libgoul-audio.so   (NDK)
+    make -C core android   # -> dist/android/arm64-v8a/libgoul-audio.so   (NDK 28.2, pas le 30)
     make -C core ios       # -> dist/ios/GoulAudioCore.xcframework        (macOS, Xcode)
 
 Zig 0.17.1. Rien de construit n'est commité.

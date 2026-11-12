@@ -287,11 +287,11 @@ fn addTarget(
     const opus_c = linkOpus(b, module);
 
     if (options.sysroot) |sysroot| {
-        // Le niveau d'API Android, pour les en-têtes du NDK. Le NDK 30 refuse
-        // de compiler sans lui (« Unversioned target triples are not
-        // supported ») ; le 28 se rabattait en silence sur « toutes les API ».
-        // Il passe en macro et pas dans la cible : une cible versionnée fait
-        // demander à Zig sa propre libc Android, qu'il ne fournit pas.
+        // Le niveau d'API Android, pour les en-têtes du NDK : sans lui, le NDK 28
+        // se rabat en silence sur « toutes les API ». Il passe en macro et pas
+        // dans la cible, car une cible versionnée fait demander à Zig sa propre
+        // libc Android, qu'il ne fournit pas. (Le NDK 30 refuse, lui, toute
+        // cible sans version : la CI fixe donc le NDK, voir NDK_VERSION.)
         if (options.triple != null) {
             const api = b.fmt("{d}", .{android_api});
             module.addCMacro("__ANDROID_API__", api);

@@ -8,6 +8,9 @@ on:
 # Doit valoir minimum_zig_version dans core/build.zig.zon.
 env:
   ZIG_VERSION: 0.17.1
+  # Fixé comme Zig : le NDK 30 refuse les cibles Android sans version, que
+  # Zig produit. Le même NDK partout donne le même binaire partout.
+  NDK_VERSION: 28.2.13676358
 
 jobs:
   core:
@@ -57,8 +60,9 @@ jobs:
       - uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      # Le NDK est préinstallé sur les machines GitHub.
-      - run: ANDROID_NDK="$ANDROID_NDK_LATEST_HOME" make -C core android
+      - name: NDK ${{ env.NDK_VERSION }}
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
+      - run: ANDROID_NDK="$ANDROID_HOME/ndk/$NDK_VERSION" make -C core android
       - run: test -s dist/android/arm64-v8a/libgoul-audio.so
 
   ios:

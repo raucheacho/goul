@@ -9,6 +9,9 @@ on:
 
 env:
   ZIG_VERSION: 0.17.1
+  # Fixé comme Zig : le NDK 30 refuse les cibles Android sans version, que
+  # Zig produit. Le même NDK partout donne le même binaire partout.
+  NDK_VERSION: 28.2.13676358
 
 jobs:
   test:
@@ -65,7 +68,9 @@ jobs:
       - uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      - run: ANDROID_NDK="$ANDROID_NDK_LATEST_HOME" make -C core android
+      - name: NDK ${{ env.NDK_VERSION }}
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
+      - run: ANDROID_NDK="$ANDROID_HOME/ndk/$NDK_VERSION" make -C core android
       - run: cd dist/android && zip -r ../../goul-audio-android-${GITHUB_REF_NAME}.zip .
       - uses: actions/upload-artifact@v4
         with:
